@@ -1,0 +1,158 @@
+import os
+import time
+import socket
+import requests
+import json
+import whois
+from colorama import init, Fore, Style
+
+init(autoreset=True)
+
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def print_logo():
+    ascii_art = [
+        "███████╗████████╗██████╗░",
+        "██╔════╝╚══██╔══╝██╔══██╗",
+        "█████╗░░░░░██║░░░██████╔╝",
+        "██╔══╝░░░░░██║░░░██╔═══╝░",
+        "███████╗░░░██║░░░██║░░░░░",
+        "╚══════╝░░░╚═╝░░░╚═╝░░░░░",
+    ]
+
+    colors = [
+        Fore.CYAN + Style.BRIGHT,
+        Fore.CYAN,
+        Fore.CYAN + Style.DIM,
+        Fore.BLUE + Style.DIM,
+        Fore.BLUE,
+        Fore.BLUE + Style.BRIGHT,
+    ]
+
+    for line, color in zip(ascii_art, colors):
+        print(color + line)
+
+    print(Style.RESET_ALL + "\nThis script is made for the ETP team\n")
+
+def get_ip_api_info(ip):
+    try:
+        r = requests.get(f"http://ip-api.com/json/{ip}")
+        return r.json() if r.json().get('status') == 'success' else None
+    except:
+        return None
+
+def get_ipinfo_io_info(ip):
+    try:
+        return requests.get(f"https://ipinfo.io/{ip}/json").json()
+    except:
+        return None
+
+def get_ipwhois_io_info(ip):
+    try:
+        return requests.get(f"https://ipwhois.app/json/{ip}").json()
+    except:
+        return None
+
+def reverse_dns(ip):
+    try:
+        return socket.gethostbyaddr(ip)[0]
+    except:
+        return None
+
+def whois_info(ip):
+    try:
+        w = whois.whois(ip)
+        return w.text
+    except:
+        return None
+
+def check_proxy(ip):
+    try:
+        r = requests.get(f"https://proxycheck.io/v2/{ip}?vpn=1&asn=1")
+        return r.json()
+    except:
+        return None
+
+def print_full_ip_info(ip):
+    print_logo()
+    print(f"🔎 Gathering full info for IP: {ip}\n")
+
+    ip_api = get_ip_api_info(ip)
+    ipinfo_io = get_ipinfo_io_info(ip)
+    ipwhois_io = get_ipwhois_io_info(ip)
+    rdns = reverse_dns(ip)
+    w_info = whois_info(ip)
+    proxy_info = check_proxy(ip)
+
+    if ip_api:
+        print("=== ip-api.com ===")
+        for k, v in ip_api.items():
+            print(f"{k}: {v}")
+        print()
+    else:
+        print("Failed to fetch from ip-api.com\n")
+
+    if ipinfo_io:
+        print("=== ipinfo.io ===")
+        for k, v in ipinfo_io.items():
+            print(f"{k}: {v}")
+        print()
+    else:
+        print("Failed to fetch from ipinfo.io\n")
+
+    if ipwhois_io:
+        print("=== ipwhois.app ===")
+        for k, v in ipwhois_io.items():
+            print(f"{k}: {v}")
+        print()
+    else:
+        print("Failed to fetch from ipwhois.app\n")
+
+    if w_info:
+        print("=== Whois Info ===")
+        print(w_info)
+        print()
+    else:
+        print("Failed to fetch whois info\n")
+
+    if proxy_info and proxy_info.get(ip):
+        print("=== Proxy Check ===")
+        print(json.dumps(proxy_info[ip], indent=4))
+        print()
+    else:
+        print("Failed to fetch proxy info or not a proxy\n")
+
+    if rdns:
+        print(f"=== Reverse DNS Lookup ===\nHostname: {rdns}\n")
+    else:
+        print("No reverse DNS found\n")
+
+def scan_ports(ip):
+    print_logo()
+    print(f"⛔ Starting port scan on {ip}")
+    for port in range(1, 1025):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                result = s.connect_ex((ip, port))
+                if result == 0:
+                    print(f"✅ Port {port} is open")
+        except KeyboardInterrupt:
+            print("\n❌ Scan interrupted.")
+            break
+        except Exception as e:
+            print(f"⚠️ Error: {e}")
+            break
+    print("✅ Scan completed.")
+
+if __name__ == "__main__":
+    clear_screen()
+    print_logo()
+    target_ip = input("🌐 Please enter the IP address to scan: ")
+    clear_screen()
+    print_full_ip_info(target_ip)
+    time.sleep(2)
+    input("\n🕵️ Press Enter to start port scanning...")
+    clear_screen()
+    scan_ports(target_ip)
